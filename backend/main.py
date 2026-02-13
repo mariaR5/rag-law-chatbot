@@ -1,5 +1,8 @@
 from fastapi import FastAPI
-from schemas import QueryRequest, QueryResponse
+from schemas import QueryRequest, QueryResponse, HighlightRequest
+from pdf_highlighter import highlight_pdf
+from pathlib import Path
+from fastapi.responses import FileResponse
 
 app = FastAPI()
 
@@ -19,3 +22,23 @@ def ask_bylaw(request: QueryRequest):
 @app.get('/')
 def root():
     return {"message": "Server is running"}
+
+@app.post('/highlight')
+def generate_highlighted_pdf(citation: HighlightRequest):
+    try:
+        output_file = highlight_pdf(
+            source_pdf = citation.pdf_name,
+            page_number = citation.page,
+            snippet = citation.snippet
+        )
+    
+        output_path = Path("highlighted_pdfs") / output_file
+        return FileResponse(
+            path = output_path,
+            media_type = "application/pdf",
+            filename = output_file
+        )
+    except ValueError as e:
+        return {"error": str(e)}
+    except Exception as e:
+        return {"error": "An unexpected error occurred"}
