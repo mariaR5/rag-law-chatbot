@@ -28,3 +28,6 @@ def build_vector_store():
     vector_db.save_local("faiss_index")
     print(f"Indexed {len(all_chunks)} chunks from PDFs")
     return vector_db
+
+if __name__ == "__main__":
+    build_vector_store()
