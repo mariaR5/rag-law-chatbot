@@ -64,12 +64,33 @@ def root():
 
 @app.post('/ask', response_model=QueryResponse)
 def ask_bylaw(request: QueryRequest):
-    # Invoke RAG pipeline
+    docs_with_scores = vector_db.similarity_search_with_relevance_scores(request.question, k=3)
+
+    threshold = 0.3
+    filtered_docs = [doc for doc, score in docs_with_scores if score >= threshold]
+
+    if not filtered_docs:
+        return {
+            "answer": "I'm sorry, I couldn't find any relevant information in the loaded bylaws regarding your query.",
+            "citations": []
+        }
+
+    # Invoke RAG pipeline ( if we have relevant docs )
     response = rag_chain.invoke({"input": request.question})
 
     # Extract text answer
     answer_text = response["answer"]
 
+    # Search for negative answers from LLM
+    negative_phrases = ["i don't know", "not mentioned in the context", "i'm sorry"]
+
+    if any(phrase in answer_text.lower() for phrase in negative_phrases):
+        return {
+            "answer": answer_text,
+            "citations": []
+        }
+
+    # Success case -> Return answer and citations from context
     citations = [
         {
             "source": d.metadata.get("source", "Unknown"),
