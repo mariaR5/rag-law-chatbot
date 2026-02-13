@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_huggingface import HuggingFaceEmbeddings
@@ -7,14 +8,19 @@ from langchain_community.vectorstores import FAISS
 embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
 
 def build_vector_store():
-    data_path = 'data/'
+    data_path = Path('data/')
     all_chunks = []
 
     for file in os.listdir(data_path):
         if file.endswith(".pdf"):
-            loader = PyPDFLoader(os.path.join(data_path, file))
+            file_path = data_path / file
+            loader = PyPDFLoader(str(file_path))
             docs = loader.load()
 
+            # Update metadata to store only filename, not full path
+            for doc in docs:
+                doc.metadata["source"] = file  # Just the filename
+            
             # Text chunking
             text_splitter = RecursiveCharacterTextSplitter(
                 chunk_size=800,

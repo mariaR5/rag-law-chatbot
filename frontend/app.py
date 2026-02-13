@@ -167,12 +167,15 @@ for role, message in st.session_state.messages:
 
 
                     for citation in message["citations"]:
+                        # Truncate snippet for display only
+                        display_snippet = citation['snippet'][:200] + "..." if len(citation['snippet']) > 200 else citation['snippet']
+                        
                         st.markdown(
                             f"""
                             **Source:** {citation['source']}  
                             **Page:** {citation['page']}  
 
-                            > {citation['snippet']}
+                            > {display_snippet}
                             """
                         )
             else:

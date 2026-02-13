@@ -71,7 +71,7 @@ def ask_bylaw(request: QueryRequest):
         {
             "source": d.metadata.get("source", "Unknown"),
             "page": d.metadata.get("page", 0) + 1,
-            "snippet": d.page_content[:100] + "..."
+            "snippet": d.page_content  # Store full content for accurate highlighting
         } for d in response["context"]
     ]
 
@@ -95,10 +95,11 @@ def generate_highlighted_pdf(request: MultiHighlightRequest):
     
     # Validate PDF exists
     pdf_path = DATA_FOLDER / request.pdf_name
+    
     if not pdf_path.exists():
         raise HTTPException(
             status_code=404,
-            detail=f"PDF '{request.pdf_name}' not found"
+            detail=f"PDF '{request.pdf_name}' not found at {pdf_path}"
         )
     
     try:
@@ -125,3 +126,4 @@ def generate_highlighted_pdf(request: MultiHighlightRequest):
             status_code=500,
             detail=f"Internal server error: {str(e)}"
         )
+
