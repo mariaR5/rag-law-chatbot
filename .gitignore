@@ -1,0 +1,46 @@
+# ===== Python =====
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments (inside backend)
+backend/venv/
+backend/env/
+backend/.venv/
+
+# If venv is created at root (just in case)
+venv/
+env/
+.venv/
+
+# Environment variables / secrets
+backend/.env
+backend/.env.*
+.env
+.env.*
+
+# Python build files
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# Logs
+*.log
+
+# SQLite / local databases
+*.sqlite3
+*.db
+
+# VS Code / IDE
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Cache & test
+.pytest_cache/
+.mypy_cache/
+.cache/
