@@ -1,123 +1,90 @@
 from pathlib import Path
 import fitz
-from typing import List
+from typing import List, Dict
 
 DATA_FOLDER = Path("data")
 
-# Constants for text matching
-MIN_PART_LENGTH = 3  # Minimum length for comma-separated parts
-MIN_WINDOW_SIZE = 3  # Minimum phrase length for sliding window search
+# Constants
+MIN_PART_LENGTH = 3
+MIN_WINDOW_SIZE = 3
 
-def highlight_snippet_on_page(page, snippet: str) -> bool:
-    """
-    Attempt to highlight a text snippet on a PDF page using multiple strategies.
-    
-    Args:
-        page: PyMuPDF page object
-        snippet: Text snippet to highlight
+def _search_and_highlight(page: fitz.Page, text: str) -> bool:
+    """Helper to search for text and apply highlights."""
+    matches = page.search_for(text)
+    if not matches:
+        return False
         
-    Returns:
-        True if snippet was found and highlighted, False otherwise
+    for inst in matches:
+        page.add_highlight_annot(inst).update()
+    return True
+
+def highlight_snippet_on_page(page: fitz.Page, snippet: str) -> bool:
     """
-    # 1. Standardize the snippet (normalize whitespace)
+    Attempt to highlight a text snippet using multiple strategies:
+    1. Exact match (normalized whitespace)
+    2. Comma-separated parts
+    3. Sliding window of words
+    """
     snippet_clean = " ".join(snippet.split())
-    
-    # 2. Try full literal search first
-    matches = page.search_for(snippet_clean)
-    if matches:
-        for inst in matches:
-            page.add_highlight_annot(inst).update()
+    if not snippet_clean:
+        return False
+
+    # 1. Exact match
+    if _search_and_highlight(page, snippet_clean):
         return True
 
-    # 3. Try comma-separated parts (for lists or multi-part citations)
+    # 2. Comma-separated parts
+    found_any = False
     if "," in snippet_clean:
         parts = [p.strip() for p in snippet_clean.split(",") if len(p.strip()) > MIN_PART_LENGTH]
-        found_any = False
         for part in parts:
-            matches = page.search_for(part)
-            if matches:
-                for inst in matches:
-                    page.add_highlight_annot(inst).update()
+            if _search_and_highlight(page, part):
                 found_any = True
         if found_any:
             return True
 
-    # 4. Sliding window fallback (try progressively smaller phrases)
+    # 3. Sliding window fallback
     words = snippet_clean.split()
     for window_size in range(len(words) - 1, MIN_WINDOW_SIZE, -1):
         for start in range(len(words) - window_size + 1):
             phrase = " ".join(words[start:start + window_size])
-            matches = page.search_for(phrase)
-            if matches:
-                for inst in matches:
-                    page.add_highlight_annot(inst).update()
+            if _search_and_highlight(page, phrase):
                 return True
 
     return False
 
-
 def highlight_pages(source_pdf: str, citations: List[dict]) -> bytes:
     """
-    Generate a PDF with highlighted citations from a source PDF.
-    
-    This function collects all citations per page, applies all highlights
-    for each page, and creates an output PDF containing only the pages
-    with highlighted citations.
-    
-    Args:
-        source_pdf: Filename of the source PDF in the data folder
-        citations: List of dicts with 'page' (int) and 'snippet' (str) keys
-        
-    Returns:
-        PDF file content as bytes
-        
-    Raises:
-        ValueError: If no valid citations are found on any page
+    Generate a PDF with highlighted citations.
     """
     input_path = DATA_FOLDER / source_pdf
-
-    doc = fitz.open(input_path)
-    output_doc = fitz.open()
-
-    # Collect all snippets per page
-    page_snippets = {}
-    for citation in citations:
-        page_number = citation["page"]
-        
-        if page_number < 1 or page_number > len(doc):
-            continue
-            
-        if page_number not in page_snippets:
-            page_snippets[page_number] = []
-        page_snippets[page_number].append(citation["snippet"])
-
-    # Apply all highlights for each page and copy to output
-    for page_number in sorted(page_snippets.keys()):
-        page = doc[page_number - 1]
-        
-        # Highlight all snippets on this page
-        found_any = False
-        for snippet in page_snippets[page_number]:
-            if highlight_snippet_on_page(page, snippet):
-                found_any = True
-        
-        # Only add page if at least one snippet was found
-        if found_any:
-            output_doc.insert_pdf(
-                doc,
-                from_page=page_number - 1,
-                to_page=page_number - 1
-            )
-
-    if len(output_doc) == 0:
-        doc.close()
-        output_doc.close()
-        raise ValueError("No valid citations found")
-
-    # Save to bytes buffer instead of file
-    pdf_bytes = output_doc.tobytes()
     
-    output_doc.close()
-    doc.close()
+    # Use context managers for proper resource cleanup
+    with fitz.open(input_path) as doc, fitz.open() as output_doc:
+        # Group snippets by page
+        page_snippets: Dict[int, List[str]] = {}
+        for citation in citations:
+            page_num = citation.get("page", 0)
+            if 1 <= page_num <= len(doc):
+                page_snippets.setdefault(page_num, []).append(citation.get("snippet", ""))
 
-    return pdf_bytes
+        if not page_snippets:
+            raise ValueError("No valid citations found")
+
+        # Process pages
+        pages_added = False
+        for page_num in sorted(page_snippets):
+            page = doc[page_num - 1]
+            snippets = page_snippets[page_num]
+            
+            # Highlight all snippets on the page (force evaluation -> no short-circuit)
+            results = [highlight_snippet_on_page(page, snip) for snip in snippets]
+            
+            if any(results):
+                output_doc.insert_pdf(doc, from_page=page_num - 1, to_page=page_num - 1)
+                pages_added = True
+
+        if not pages_added:
+            raise ValueError("No valid citations found")
+
+        return output_doc.tobytes()

@@ -22,7 +22,7 @@ app = FastAPI()
 # Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Configure for production
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -76,16 +76,16 @@ def health_check():
 @app.post('/ask', response_model=QueryResponse)
 def ask_bylaw(request: QueryRequest):
     # Calculate similarity score and compare with threshold
-    docs_with_scores = vector_db.similarity_search_with_relevance_scores(request.question, k=3)
+    # docs_with_scores = vector_db.similarity_search_with_relevance_scores(request.question, k=3)
 
-    threshold = 0.3
-    filtered_docs = [doc for doc, score in docs_with_scores if score >= threshold]
+    # threshold = 0.3
+    # filtered_docs = [doc for doc, score in docs_with_scores if score >= threshold]
 
-    if not filtered_docs:
-        return {
-            "answer": "I'm sorry, I couldn't find any relevant information in the loaded bylaws regarding your query.",
-            "citations": []
-        }
+    # if not filtered_docs:
+    #     return {
+    #         "answer": "I'm sorry, I couldn't find any relevant information in the loaded bylaws regarding your query.",
+    #         "citations": []
+    #     }
 
     # Invoke RAG pipeline ( if we have relevant docs )
     response = rag_chain.invoke({"input": request.question})
@@ -107,7 +107,7 @@ def ask_bylaw(request: QueryRequest):
         {
             "source": d.metadata.get("source", "Unknown"),
             "page": d.metadata.get("page", 0) + 1,
-            "snippet": d.page_content  # Store full content for accurate highlighting
+            "snippet": d.page_content
         } for d in response["context"]
     ]
 
