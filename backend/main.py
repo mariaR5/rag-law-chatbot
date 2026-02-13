@@ -2,10 +2,9 @@ import os
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import Response
 from schemas import QueryRequest, QueryResponse, MultiHighlightRequest
 from pdf_highlighter import highlight_pages, DATA_FOLDER
-from pathlib import Path
-from fastapi.responses import FileResponse
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_community.vectorstores import FAISS
 from langchain_groq import ChatGroq
@@ -103,17 +102,17 @@ def generate_highlighted_pdf(request: MultiHighlightRequest):
         )
     
     try:
-        output_file = highlight_pages(
+        pdf_bytes = highlight_pages(
             source_pdf=request.pdf_name,
             citations=[citation.dict() for citation in request.citations]
         )
 
-        output_path = Path("highlighted_pdfs") / output_file
-
-        return FileResponse(
-            path=output_path,
+        return Response(
+            content=pdf_bytes,
             media_type="application/pdf",
-            filename=output_file
+            headers={
+                "Content-Disposition": f"attachment; filename=highlighted_citations.pdf"
+            }
         )
 
     except ValueError as e:
