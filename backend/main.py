@@ -13,16 +13,18 @@ from langchain_classic.chains import create_retrieval_chain
 load_dotenv()
 app = FastAPI()
 
-# Load the FAISS database
+# Load the embeddings and FAISS vector DB
 embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
 vector_db = FAISS.load_local("faiss_index", embeddings, allow_dangerous_deserialization=True)
 
+# Initialise LLM
 llm = ChatGroq(
     model="llama-3.3-70b-versatile", 
     temperature=0, 
     groq_api_key=os.getenv("GROQ_API_KEY")
 )
 
+# Create prompt template
 system_prompt = (
     "You are 'Bylaw Buddy', a helpful civic assistant. "
     "Use the following pieces of retrieved context to answer the user's question. "
@@ -37,6 +39,7 @@ prompt = ChatPromptTemplate.from_messages([
     ("human", "{input}"),
 ])
 
+# Create the chains
 question_answer_chain = create_stuff_documents_chain(llm, prompt)
 rag_chain = create_retrieval_chain(vector_db.as_retriever(), question_answer_chain)
 
