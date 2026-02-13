@@ -1,7 +1,11 @@
 import os
 from dotenv import load_dotenv
-from fastapi import FastAPI
-from schemas import QueryRequest, QueryResponse
+from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from schemas import QueryRequest, QueryResponse, MultiHighlightRequest
+from pdf_highlighter import highlight_pages, DATA_FOLDER
+from pathlib import Path
+from fastapi.responses import FileResponse
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_community.vectorstores import FAISS
 from langchain_groq import ChatGroq
@@ -12,6 +16,15 @@ from langchain_classic.chains import create_retrieval_chain
 
 load_dotenv()
 app = FastAPI()
+
+# Add CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Configure for production
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Load the embeddings and FAISS vector DB
 embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
@@ -43,11 +56,9 @@ prompt = ChatPromptTemplate.from_messages([
 question_answer_chain = create_stuff_documents_chain(llm, prompt)
 rag_chain = create_retrieval_chain(vector_db.as_retriever(), question_answer_chain)
 
-
 @app.get('/')
 def root():
     return {"message": "Server is running"}
-
 
 @app.post('/ask', response_model=QueryResponse)
 def ask_bylaw(request: QueryRequest):
@@ -73,3 +84,45 @@ def ask_bylaw(request: QueryRequest):
 @app.get('/health')
 def health_check():
     return {"status": "running"}
+
+@app.post("/highlight")
+def generate_highlighted_pdf(request: MultiHighlightRequest):
+    # Validate citations list is not empty
+    if not request.citations:
+        raise HTTPException(
+            status_code=400,
+            detail="Citations list cannot be empty"
+        )
+    
+    # Validate PDF exists
+    pdf_path = DATA_FOLDER / request.pdf_name
+    if not pdf_path.exists():
+        raise HTTPException(
+            status_code=404,
+            detail=f"PDF '{request.pdf_name}' not found"
+        )
+    
+    try:
+        output_file = highlight_pages(
+            source_pdf=request.pdf_name,
+            citations=[citation.dict() for citation in request.citations]
+        )
+
+        output_path = Path("highlighted_pdfs") / output_file
+
+        return FileResponse(
+            path=output_path,
+            media_type="application/pdf",
+            filename=output_file
+        )
+
+    except ValueError as e:
+        raise HTTPException(
+            status_code=400,
+            detail=str(e)
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Internal server error: {str(e)}"
+        )
