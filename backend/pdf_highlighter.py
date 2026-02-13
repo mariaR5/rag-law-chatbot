@@ -1,11 +1,8 @@
 from pathlib import Path
 import fitz
-import uuid
 from typing import List
 
 DATA_FOLDER = Path("data")
-OUTPUT_FOLDER = Path("highlighted_pdfs")
-OUTPUT_FOLDER.mkdir(exist_ok=True)
 
 # Constants for text matching
 MIN_PART_LENGTH = 3  # Minimum length for comma-separated parts
@@ -59,7 +56,7 @@ def highlight_snippet_on_page(page, snippet: str) -> bool:
     return False
 
 
-def highlight_pages(source_pdf: str, citations: List[dict]) -> str:
+def highlight_pages(source_pdf: str, citations: List[dict]) -> bytes:
     """
     Generate a PDF with highlighted citations from a source PDF.
     
@@ -72,14 +69,12 @@ def highlight_pages(source_pdf: str, citations: List[dict]) -> str:
         citations: List of dicts with 'page' (int) and 'snippet' (str) keys
         
     Returns:
-        Filename of the generated highlighted PDF (UUID-based)
+        PDF file content as bytes
         
     Raises:
         ValueError: If no valid citations are found on any page
     """
     input_path = DATA_FOLDER / source_pdf
-    output_file_name = f"{uuid.uuid4()}.pdf"
-    output_path = OUTPUT_FOLDER / output_file_name
 
     doc = fitz.open(input_path)
     output_doc = fitz.open()
@@ -119,8 +114,10 @@ def highlight_pages(source_pdf: str, citations: List[dict]) -> str:
         output_doc.close()
         raise ValueError("No valid citations found")
 
-    output_doc.save(output_path)
+    # Save to bytes buffer instead of file
+    pdf_bytes = output_doc.tobytes()
+    
     output_doc.close()
     doc.close()
 
-    return output_file_name
+    return pdf_bytes

@@ -1,12 +1,7 @@
 import streamlit as st
 import requests
-import uuid
 import base64
-from pathlib import Path
 from typing import Optional, List, Dict
-
-HIGHLIGHT_DIR = Path("highlighted_pdfs_frontend")
-HIGHLIGHT_DIR.mkdir(exist_ok=True)
 
 API_BASE_URL = "http://localhost:8000"
 API_TIMEOUT_SHORT = 10  # Timeout for simple queries
@@ -45,7 +40,7 @@ def ask_backend(question: str) -> Dict[str, any]:
         }
 
 
-def fetch_highlighted_pdf(citations: List[Dict]) -> Optional[Path]:
+def fetch_highlighted_pdf(citations: List[Dict]) -> Optional[bytes]:
     """
     Fetch a highlighted PDF from the backend for given citations.
     
@@ -53,7 +48,7 @@ def fetch_highlighted_pdf(citations: List[Dict]) -> Optional[Path]:
         citations: List of citation dicts with 'source', 'page', and 'snippet' keys
         
     Returns:
-        Path to the saved PDF file, or None if failed
+        PDF content as bytes, or None if failed
     """
     if not citations:
         st.error("No citations to highlight")
@@ -79,29 +74,20 @@ def fetch_highlighted_pdf(citations: List[Dict]) -> Optional[Path]:
             st.error("Failed to generate highlighted PDF")
             return None
 
-        file_name = f"{uuid.uuid4()}.pdf"
-        file_path = HIGHLIGHT_DIR / file_name
-
-        with open(file_path, "wb") as f:
-            f.write(response.content)
-
-        return file_path
+        return response.content
 
     except Exception:
         st.error("Backend not reachable")
         return None
 
 
-def show_pdf_inline(pdf_path: Path) -> None:
+def show_pdf_inline(pdf_bytes: bytes) -> None:
     """
     Display a PDF inline in the Streamlit app using base64 encoding.
     
     Args:
-        pdf_path: Path to the PDF file to display
+        pdf_bytes: PDF file content as bytes
     """
-    with open(pdf_path, "rb") as f:
-        pdf_bytes = f.read()
-
     base64_pdf = base64.b64encode(pdf_bytes).decode("utf-8")
 
     pdf_display = f"""
@@ -175,9 +161,9 @@ for role, message in st.session_state.messages:
                         key=f"multi_{len(st.session_state.messages)}"
                     ):
                         with st.spinner("Generating highlighted PDF..."):
-                            pdf_path = fetch_highlighted_pdf(message["citations"])
-                            if pdf_path:
-                                show_pdf_inline(pdf_path)
+                            pdf_bytes = fetch_highlighted_pdf(message["citations"])
+                            if pdf_bytes:
+                                show_pdf_inline(pdf_bytes)
 
 
                     for citation in message["citations"]:

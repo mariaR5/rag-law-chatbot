@@ -49,3 +49,7 @@ Thumbs.db
 .pytest_cache/
 .mypy_cache/
 .cache/
+
+# Generated PDFs (now obsolete - PDFs generated in memory)
+backend/highlighted_pdfs/
+frontend/highlighted_pdfs_frontend/
