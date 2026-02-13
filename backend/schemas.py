@@ -13,7 +13,10 @@ class QueryResponse(BaseModel):
     answer: str
     citations: List[Citation]
 
-class HighlightRequest(BaseModel):
-    pdf_name: str
+class CitationItem(BaseModel):
     page: int
     snippet: str
+
+class MultiHighlightRequest(BaseModel):
+    pdf_name: str
+    citations: List[CitationItem]

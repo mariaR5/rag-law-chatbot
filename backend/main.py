@@ -1,10 +1,20 @@
-from fastapi import FastAPI
-from schemas import QueryRequest, QueryResponse, HighlightRequest
-from pdf_highlighter import highlight_pdf
+from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from schemas import QueryRequest, QueryResponse, MultiHighlightRequest
+from pdf_highlighter import highlight_pages, DATA_FOLDER
 from pathlib import Path
 from fastapi.responses import FileResponse
 
 app = FastAPI()
+
+# Add CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Configure for production
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 @app.get('/health')
 def health_check():
@@ -23,22 +33,44 @@ def ask_bylaw(request: QueryRequest):
 def root():
     return {"message": "Server is running"}
 
-@app.post('/highlight')
-def generate_highlighted_pdf(citation: HighlightRequest):
-    try:
-        output_file = highlight_pdf(
-            source_pdf = citation.pdf_name,
-            page_number = citation.page,
-            snippet = citation.snippet
+@app.post("/highlight")
+def generate_highlighted_pdf(request: MultiHighlightRequest):
+    # Validate citations list is not empty
+    if not request.citations:
+        raise HTTPException(
+            status_code=400,
+            detail="Citations list cannot be empty"
         )
     
-        output_path = Path("highlighted_pdfs") / output_file
-        return FileResponse(
-            path = output_path,
-            media_type = "application/pdf",
-            filename = output_file
+    # Validate PDF exists
+    pdf_path = DATA_FOLDER / request.pdf_name
+    if not pdf_path.exists():
+        raise HTTPException(
+            status_code=404,
+            detail=f"PDF '{request.pdf_name}' not found"
         )
+    
+    try:
+        output_file = highlight_pages(
+            source_pdf=request.pdf_name,
+            citations=[citation.dict() for citation in request.citations]
+        )
+
+        output_path = Path("highlighted_pdfs") / output_file
+
+        return FileResponse(
+            path=output_path,
+            media_type="application/pdf",
+            filename=output_file
+        )
+
     except ValueError as e:
-        return {"error": str(e)}
+        raise HTTPException(
+            status_code=400,
+            detail=str(e)
+        )
     except Exception as e:
-        return {"error": "An unexpected error occurred"}
+        raise HTTPException(
+            status_code=500,
+            detail=f"Internal server error: {str(e)}"
+        )
