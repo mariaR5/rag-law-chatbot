@@ -53,7 +53,10 @@ prompt = ChatPromptTemplate.from_messages([
 
 # Create the chains
 question_answer_chain = create_stuff_documents_chain(llm, prompt)
-rag_chain = create_retrieval_chain(vector_db.as_retriever(), question_answer_chain)
+rag_chain = create_retrieval_chain(
+    vector_db.as_retriever(search_kwargs={"k": 1}), 
+    question_answer_chain
+)
 
 @app.get('/')
 def root():
