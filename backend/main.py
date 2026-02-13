@@ -1,10 +1,13 @@
 import os
 from dotenv import load_dotenv
+
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
+
 from schemas import QueryRequest, QueryResponse, MultiHighlightRequest
 from pdf_highlighter import highlight_pages, DATA_FOLDER
+
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_community.vectorstores import FAISS
 from langchain_groq import ChatGroq
@@ -12,7 +15,7 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_classic.chains.combine_documents import create_stuff_documents_chain
 from langchain_classic.chains import create_retrieval_chain
 
-
+# App and env setup
 load_dotenv()
 app = FastAPI()
 
@@ -58,12 +61,21 @@ rag_chain = create_retrieval_chain(
     question_answer_chain
 )
 
+# Root and Health endpoint
 @app.get('/')
 def root():
     return {"message": "Server is running"}
 
+@app.get('/health')
+def health_check():
+    return {"status": "running"}
+
+
+
+# Input: User question | Output: Answer with citations
 @app.post('/ask', response_model=QueryResponse)
 def ask_bylaw(request: QueryRequest):
+    # Calculate similarity score and compare with threshold
     docs_with_scores = vector_db.similarity_search_with_relevance_scores(request.question, k=3)
 
     threshold = 0.3
@@ -104,41 +116,27 @@ def ask_bylaw(request: QueryRequest):
         "citations": citations
     }
 
-@app.get('/health')
-def health_check():
-    return {"status": "running"}
 
+
+# Get a list of all PDF files in the data folder
 @app.get('/laws')
 def get_loaded_laws():
-    """
-    Get list of all PDF files in the data folder.
-    
-    Returns:
-        List of PDF filenames
-    """
     try:
         if not DATA_FOLDER.exists():
             return []
         
         pdf_files = [f.name for f in DATA_FOLDER.glob("*.pdf")]
         return sorted(pdf_files)
+    
     except Exception as e:
         raise HTTPException(
             status_code=500,
             detail=f"Error reading data folder: {str(e)}"
         )
 
+# Serves the PDF file from the data folder
 @app.get('/pdf/{pdf_name}')
 def serve_pdf(pdf_name: str):
-    """
-    Serve a PDF file from the data folder.
-    
-    Args:
-        pdf_name: Name of the PDF file to serve
-        
-    Returns:
-        PDF file content
-    """
     pdf_path = DATA_FOLDER / pdf_name
     
     if not pdf_path.exists():
@@ -158,6 +156,7 @@ def serve_pdf(pdf_name: str):
         }
     )
 
+# Generate a highlighted PDF and returns a downloadable file
 @app.post("/highlight")
 def generate_highlighted_pdf(request: MultiHighlightRequest):
     # Validate citations list is not empty
@@ -177,11 +176,13 @@ def generate_highlighted_pdf(request: MultiHighlightRequest):
         )
     
     try:
+        # Generate a new hilighted PDF
         pdf_bytes = highlight_pages(
             source_pdf=request.pdf_name,
             citations=[citation.dict() for citation in request.citations]
         )
 
+        # Return as downloadable file
         return Response(
             content=pdf_bytes,
             media_type="application/pdf",
@@ -200,4 +201,3 @@ def generate_highlighted_pdf(request: MultiHighlightRequest):
             status_code=500,
             detail=f"Internal server error: {str(e)}"
         )
-
