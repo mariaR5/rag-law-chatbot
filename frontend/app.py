@@ -3,10 +3,13 @@ import requests
 import base64
 from typing import Optional, List, Dict
 
-API_BASE_URL = "http://localhost:8000"
-API_TIMEOUT_SHORT = 10  # Timeout for simple queries
-API_TIMEOUT_LONG = 20   # Timeout for PDF generation
 
+# CONFIGURATION
+API_BASE_URL = "http://localhost:8000"
+API_TIMEOUT_SHORT = 10
+API_TIMEOUT_LONG = 20
+
+# API FUNCTIONS
 @st.cache_data(ttl=300)  # Cache for 5 minutes
 def get_loaded_laws() -> List[str]:
     """Get list of indexed law PDFs from backend."""
@@ -22,6 +25,7 @@ def get_loaded_laws() -> List[str]:
     except Exception:
         # Return empty list if backend is unreachable
         return []
+
 
 def ask_backend(question: str) -> Dict[str, any]:
     """
@@ -108,34 +112,101 @@ def show_pdf_inline(pdf_bytes: bytes) -> None:
 
     st.markdown(pdf_display, unsafe_allow_html=True)
 
-
+# PAGE CONFIGURATION
 st.set_page_config(
     page_title='Bylaw Buddy',
     layout="wide",
-)
-
-st.title("Bylaw Buddy")
-
-st.markdown(
-    """
-    **Your AI assistant for Indian laws** 🇮🇳  
-
-    Ask questions based on official Acts like the Environment Protection Act,  
-    Motor Vehicles Act, and Consumer Protection Act.
-
-    ---
-    ⚠️ **Disclaimer:**  
-    This tool is for **educational and informational purposes only**.  
-    It does **not** constitute legal advice.  
-    For legal decisions, consult a qualified legal professional.
-    """
+    initial_sidebar_state="expanded",
 )
 
 
-st.sidebar.header("Laws Indexed")
-
-st.sidebar.markdown("""
+# CUSTOM CSS STYLES
+st.markdown("""
 <style>
+/* Title and Subtitle Styling */
+h1 {
+    text-align: center;
+    font-size: 4rem !important;
+}
+
+.subtitle {
+    font-size: 1.4em;
+    font-weight: 600;
+    margin-bottom: 10px;
+    text-align: center;
+}
+
+/* Disclaimer Card */
+.disclaimer-card {
+    background: linear-gradient(135deg, #FFF4E6 0%, #FFE8CC 100%);
+    border-left: 4px solid #FF9800;
+    border-radius: 8px;
+    padding: 16px 20px;
+    margin: 20px auto;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    max-width: 70%;
+}
+
+.disclaimer-card .icon {
+    font-size: 1.5em;
+    margin-right: 10px;
+    vertical-align: middle;
+}
+
+.disclaimer-card .title {
+    font-weight: 600;
+    font-size: 1.1em;
+    color: #E65100;
+    margin-bottom: 8px;
+}
+
+.disclaimer-card .content {
+    color: #5D4037;
+    line-height: 1.6;
+    font-size: 0.95em;
+}
+
+/* Chat Input Styling */
+.stChatInput:focus-within {
+    border-color: #2B8DFF !important;
+    border-width: 1px !important;
+    border-style: solid !important;
+    border-radius: 0.5rem !important;
+}
+
+.stChatInput textarea:focus,
+.stChatInput textarea:focus-visible,
+textarea[data-testid="stChatInput"]:focus,
+textarea[data-testid="stChatInput"]:focus-visible {
+    border: none !important;
+    box-shadow: none !important;
+    outline: none !important;
+}
+
+.stChatInput textarea {
+    outline: none !important;
+    border: none !important;
+    box-shadow: none !important;
+}
+
+.stChatInput > div,
+.stChatInput > div > div {
+    border: none !important;
+    box-shadow: none !important;
+}
+
+.stChatInput button {
+    background-color: #D2EAFF !important;
+    color: #2B8DFF !important;
+}
+
+.stChatInput button:hover,
+.stChatInput:focus-within button {
+    background-color: #2B8DFF !important;
+    color: white !important;
+}
+
+/* PDF Link Styling */
 .pdf-link {
     text-decoration: none !important;
     color: inherit !important;
@@ -143,9 +214,11 @@ st.sidebar.markdown("""
     justify-content: space-between;
     align-items: center;
 }
+
 .pdf-link:hover {
     color: #1f77b4 !important;
 }
+
 .pdf-link::after {
     content: "🔗";
     margin-left: 8px;
@@ -153,6 +226,31 @@ st.sidebar.markdown("""
 }
 </style>
 """, unsafe_allow_html=True)
+
+# HEADER SECTION
+st.title("Bylaw Buddy")
+
+st.markdown('<div class="subtitle">Your AI assistant for Indian laws</div>', unsafe_allow_html=True)
+
+# Disclaimer card
+st.markdown("""
+<div class="disclaimer-card">
+    <div class="title">
+        <span class="icon">⚠️</span>
+        Important Disclaimer
+    </div>
+    <div class="content">
+        This tool is for <strong>educational and informational purposes only</strong>. 
+        It does <strong>not</strong> constitute legal advice. 
+        For legal decisions, please consult a qualified legal professional.
+    </div>
+</div>
+""", unsafe_allow_html=True)
+
+st.markdown("---")
+
+# SIDEBAR
+st.sidebar.header("Laws Indexed")
 
 for law in get_loaded_laws():
     pdf_url = f"{API_BASE_URL}/pdf/{law}"
@@ -162,25 +260,28 @@ for law in get_loaded_laws():
         unsafe_allow_html=True
     )
 
+# CHAT INTERFACE
+# Initialize session state
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
+# Chat input
 user_question = st.chat_input(
     "Ask a legal question (e.g. Is wearing helmet compulsory?)"
 )
 
+# Handle new question
 if user_question:
     st.session_state.messages.append(("user", user_question))
     with st.spinner("Thinking..."):
         response = ask_backend(user_question)
-    
     st.session_state.messages.append(("assistant", response))
 
+# Display chat history
 for idx, (role, message) in enumerate(st.session_state.messages):
     if role == "user":
         with st.chat_message("user"):
             st.write(message)
-
     else:
         with st.chat_message("assistant"):
             st.write(message["answer"])
@@ -188,20 +289,13 @@ for idx, (role, message) in enumerate(st.session_state.messages):
             if message["citations"]:
                 with st.expander("Evidence"):
 
-                    if st.button(
-                        "View citation",
-                        key=f"multi_{idx}"
-                    ):
+                    if st.button("View citation", key=f"multi_{idx}"):
                         with st.spinner("Generating highlighted PDF..."):
                             pdf_bytes = fetch_highlighted_pdf([message["citations"][0]])
                             if pdf_bytes:
                                 show_pdf_inline(pdf_bytes)
 
-
-                    # Display only the first citation
                     citation = message["citations"][0]
-                    display_snippet = citation['snippet'][:200] + "..." if len(citation['snippet']) > 200 else citation['snippet']
-                    
                     st.markdown(
                         f"""
                         **Source:** {citation['source']}  
