@@ -8,6 +8,10 @@ backend/venv/
 backend/env/
 backend/.venv/
 
+frontend/venv/
+frontend/env/
+frontend/.venv/
+
 # If venv is created at root (just in case)
 venv/
 env/
@@ -18,7 +22,8 @@ backend/.env
 backend/.env.*
 .env
 .env.*
-
+frontend/.env
+frontend/.env.*
 # Python build files
 build/
 dist/
