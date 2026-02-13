@@ -1,0 +1,26 @@
+fastapi
+uvicorn
+python-dotenv
+pydantic
+
+# LangChain ecosystem (RAG)
+langchain
+langchain-core
+langchain-community
+langchain-classic
+langchain-huggingface
+langchain-groq
+langchain-text-splitters
+
+# Vector DB + embeddings
+faiss-cpu
+sentence-transformers
+huggingface-hub
+
+# PDF processing
+pymupdf
+pypdf
+
+# Frontend (Streamlit)
+streamlit
+requests
