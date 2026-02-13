@@ -75,17 +75,6 @@ def health_check():
 # Input: User question | Output: Answer with citations
 @app.post('/ask', response_model=QueryResponse)
 def ask_bylaw(request: QueryRequest):
-    # Calculate similarity score and compare with threshold
-    docs_with_scores = vector_db.similarity_search_with_relevance_scores(request.question, k=3)
-
-    threshold = 0.3
-    filtered_docs = [doc for doc, score in docs_with_scores if score >= threshold]
-
-    if not filtered_docs:
-        return {
-            "answer": "I'm sorry, I couldn't find any relevant information in the loaded bylaws regarding your query.",
-            "citations": []
-        }
 
     # Invoke RAG pipeline ( if we have relevant docs )
     response = rag_chain.invoke({"input": request.question})
