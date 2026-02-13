@@ -1,9 +1,19 @@
+import os
+from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
 from schemas import QueryRequest, QueryResponse, MultiHighlightRequest
 from pdf_highlighter import highlight_pages, DATA_FOLDER
+from langchain_huggingface import HuggingFaceEmbeddings
+from langchain_community.vectorstores import FAISS
+from langchain_groq import ChatGroq
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_classic.chains.combine_documents import create_stuff_documents_chain
+from langchain_classic.chains import create_retrieval_chain
 
+
+load_dotenv()
 app = FastAPI()
 
 # Add CORS middleware
@@ -15,22 +25,64 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-@app.get('/health')
-def health_check():
-    return {"status": "running"}
+# Load the embeddings and FAISS vector DB
+embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
+vector_db = FAISS.load_local("faiss_index", embeddings, allow_dangerous_deserialization=True)
 
-@app.post('/ask', response_model=QueryResponse)
-def ask_bylaw(request: QueryRequest):
-    return {
-        "answer": f"You asked {request.question}. This is a mock response while the backend is being built",
-        "citations": [
-            {"source": "demo.pdf", "page": 1, "snippet": "Mock citation text"}
-        ]
-    }
+# Initialise LLM
+llm = ChatGroq(
+    model="llama-3.3-70b-versatile", 
+    temperature=0, 
+    groq_api_key=os.getenv("GROQ_API_KEY")
+)
+
+# Create prompt template
+system_prompt = (
+    "You are 'Bylaw Buddy', a helpful civic assistant. "
+    "Use the following pieces of retrieved context to answer the user's question. "
+    "If you don't know the answer based on the context, say that you don't know. "
+    "Keep the answer concise and professional."
+    "\n\n"
+    "{context}"
+)
+
+prompt = ChatPromptTemplate.from_messages([
+    ("system", system_prompt),
+    ("human", "{input}"),
+])
+
+# Create the chains
+question_answer_chain = create_stuff_documents_chain(llm, prompt)
+rag_chain = create_retrieval_chain(vector_db.as_retriever(), question_answer_chain)
 
 @app.get('/')
 def root():
     return {"message": "Server is running"}
+
+@app.post('/ask', response_model=QueryResponse)
+def ask_bylaw(request: QueryRequest):
+    # Invoke RAG pipeline
+    response = rag_chain.invoke({"input": request.question})
+
+    # Extract text answer
+    answer_text = response["answer"]
+
+    citations = [
+        {
+            "source": d.metadata.get("source", "Unknown"),
+            "page": d.metadata.get("page", 0) + 1,
+            "snippet": d.page_content[:100] + "..."
+        } for d in response["context"]
+    ]
+
+    return {
+        "answer": answer_text,
+        "citations": citations
+    }
+
+@app.get('/health')
+def health_check():
+    return {"status": "running"}
 
 @app.post("/highlight")
 def generate_highlighted_pdf(request: MultiHighlightRequest):
