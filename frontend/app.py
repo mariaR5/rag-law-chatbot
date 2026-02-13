@@ -7,14 +7,21 @@ API_BASE_URL = "http://localhost:8000"
 API_TIMEOUT_SHORT = 10  # Timeout for simple queries
 API_TIMEOUT_LONG = 20   # Timeout for PDF generation
 
+@st.cache_data(ttl=300)  # Cache for 5 minutes
 def get_loaded_laws() -> List[str]:
-    """Get list of indexed law PDFs."""
-    # Temporary fallback until backend is ready
-    return [
-        "Environment_Protection_Act.pdf",
-        "Motor_Vehicles_Act.pdf",
-        "Consumer_Protection_Act.pdf"
-    ]
+    """Get list of indexed law PDFs from backend."""
+    try:
+        response = requests.get(
+            f"{API_BASE_URL}/laws",
+            timeout=API_TIMEOUT_SHORT
+        )
+        if response.status_code == 200:
+            return response.json()
+        else:
+            return []
+    except Exception:
+        # Return empty list if backend is unreachable
+        return []
 
 def ask_backend(question: str) -> Dict[str, any]:
     """
@@ -127,8 +134,33 @@ st.markdown(
 
 st.sidebar.header("Laws Indexed")
 
+st.sidebar.markdown("""
+<style>
+.pdf-link {
+    text-decoration: none !important;
+    color: inherit !important;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.pdf-link:hover {
+    color: #1f77b4 !important;
+}
+.pdf-link::after {
+    content: "🔗";
+    margin-left: 8px;
+    font-size: 0.9em;
+}
+</style>
+""", unsafe_allow_html=True)
+
 for law in get_loaded_laws():
-    st.sidebar.write(f" -> {law}")
+    pdf_url = f"{API_BASE_URL}/pdf/{law}"
+    display_name = law.replace("_", " ").replace(".pdf", "")
+    st.sidebar.markdown(
+        f'<a href="{pdf_url}" target="_blank" class="pdf-link">{display_name}</a>',
+        unsafe_allow_html=True
+    )
 
 if "messages" not in st.session_state:
     st.session_state.messages = []

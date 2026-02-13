@@ -87,6 +87,56 @@ def ask_bylaw(request: QueryRequest):
 def health_check():
     return {"status": "running"}
 
+@app.get('/laws')
+def get_loaded_laws():
+    """
+    Get list of all PDF files in the data folder.
+    
+    Returns:
+        List of PDF filenames
+    """
+    try:
+        if not DATA_FOLDER.exists():
+            return []
+        
+        pdf_files = [f.name for f in DATA_FOLDER.glob("*.pdf")]
+        return sorted(pdf_files)
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error reading data folder: {str(e)}"
+        )
+
+@app.get('/pdf/{pdf_name}')
+def serve_pdf(pdf_name: str):
+    """
+    Serve a PDF file from the data folder.
+    
+    Args:
+        pdf_name: Name of the PDF file to serve
+        
+    Returns:
+        PDF file content
+    """
+    pdf_path = DATA_FOLDER / pdf_name
+    
+    if not pdf_path.exists():
+        raise HTTPException(
+            status_code=404,
+            detail=f"PDF '{pdf_name}' not found"
+        )
+    
+    with open(pdf_path, 'rb') as f:
+        pdf_content = f.read()
+    
+    return Response(
+        content=pdf_content,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f"inline; filename={pdf_name}"
+        }
+    )
+
 @app.post("/highlight")
 def generate_highlighted_pdf(request: MultiHighlightRequest):
     # Validate citations list is not empty
