@@ -144,7 +144,7 @@ if user_question:
     
     st.session_state.messages.append(("assistant", response))
 
-for role, message in st.session_state.messages:
+for idx, (role, message) in enumerate(st.session_state.messages):
     if role == "user":
         with st.chat_message("user"):
             st.write(message)
@@ -157,26 +157,24 @@ for role, message in st.session_state.messages:
                 with st.expander("Evidence"):
 
                     if st.button(
-                        "View all citations",
-                        key=f"multi_{len(st.session_state.messages)}"
+                        "View citation",
+                        key=f"multi_{idx}"
                     ):
                         with st.spinner("Generating highlighted PDF..."):
-                            pdf_bytes = fetch_highlighted_pdf(message["citations"])
+                            pdf_bytes = fetch_highlighted_pdf([message["citations"][0]])
                             if pdf_bytes:
                                 show_pdf_inline(pdf_bytes)
 
 
-                    for citation in message["citations"]:
-                        # Truncate snippet for display only
-                        display_snippet = citation['snippet'][:200] + "..." if len(citation['snippet']) > 200 else citation['snippet']
-                        
-                        st.markdown(
-                            f"""
-                            **Source:** {citation['source']}  
-                            **Page:** {citation['page']}  
-
-                            > {display_snippet}
-                            """
-                        )
+                    # Display only the first citation
+                    citation = message["citations"][0]
+                    display_snippet = citation['snippet'][:200] + "..." if len(citation['snippet']) > 200 else citation['snippet']
+                    
+                    st.markdown(
+                        f"""
+                        **Source:** {citation['source']}  
+                        **Page:** {citation['page']}  
+                        """
+                    )
             else:
                 st.write("No evidence found.")
