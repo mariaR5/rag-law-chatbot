@@ -17,9 +17,9 @@ def build_vector_store():
             loader = PyPDFLoader(str(file_path))
             docs = loader.load()
 
-            # Update metadata to store only filename, not full path
+            # Update metadata to store only filename
             for doc in docs:
-                doc.metadata["source"] = file  # Just the filename
+                doc.metadata["source"] = file
             
             # Text chunking
             text_splitter = RecursiveCharacterTextSplitter(

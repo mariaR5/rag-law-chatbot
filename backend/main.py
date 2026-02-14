@@ -5,7 +5,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
 
-from schemas import QueryRequest, QueryResponse, MultiHighlightRequest
+from schemas import QueryRequest, QueryResponse, HighlightRequest
 from pdf_highlighter import highlight_pages, DATA_FOLDER
 
 from langchain_huggingface import HuggingFaceEmbeddings
@@ -159,7 +159,7 @@ def serve_pdf(pdf_name: str):
 
 # Generate a highlighted PDF and returns a downloadable file
 @app.post("/highlight")
-def generate_highlighted_pdf(request: MultiHighlightRequest):
+def generate_highlighted_pdf(request: HighlightRequest):
     # Validate citations list is not empty
     if not request.citations:
         raise HTTPException(

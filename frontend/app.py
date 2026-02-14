@@ -3,13 +3,12 @@ import requests
 import base64
 from typing import Optional, List, Dict
 
-
-# CONFIGURATION
+# Configurations
 API_BASE_URL = "http://localhost:8000"
 API_TIMEOUT_SHORT = 10
 API_TIMEOUT_LONG = 20
 
-# API FUNCTIONS
+# API Functions
 @st.cache_data(ttl=300)  # Cache for 5 minutes
 def get_loaded_laws() -> List[str]:
     """Get list of indexed law PDFs from backend."""
@@ -26,17 +25,8 @@ def get_loaded_laws() -> List[str]:
         # Return empty list if backend is unreachable
         return []
 
-
+# Ask backend for an answer
 def ask_backend(question: str) -> Dict[str, any]:
-    """
-    Send a question to the backend API.
-    
-    Args:
-        question: Legal question to ask
-        
-    Returns:
-        Dictionary with 'answer' and 'citations' keys
-    """
     try:
         response = requests.post(
             f"{API_BASE_URL}/ask",
@@ -50,17 +40,8 @@ def ask_backend(question: str) -> Dict[str, any]:
             "citations": []
         }
 
-
+# Fetch highlighted PDF from backend
 def fetch_highlighted_pdf(citations: List[Dict]) -> Optional[bytes]:
-    """
-    Fetch a highlighted PDF from the backend for given citations.
-    
-    Args:
-        citations: List of citation dicts with 'source', 'page', and 'snippet' keys
-        
-    Returns:
-        PDF content as bytes, or None if failed
-    """
     if not citations:
         st.error("No citations to highlight")
         return None
@@ -91,14 +72,8 @@ def fetch_highlighted_pdf(citations: List[Dict]) -> Optional[bytes]:
         st.error("Backend not reachable")
         return None
 
-
+# Display PDF inline
 def show_pdf_inline(pdf_bytes: bytes) -> None:
-    """
-    Display a PDF inline in the Streamlit app using base64 encoding.
-    
-    Args:
-        pdf_bytes: PDF file content as bytes
-    """
     base64_pdf = base64.b64encode(pdf_bytes).decode("utf-8")
 
     pdf_display = f"""
@@ -112,15 +87,14 @@ def show_pdf_inline(pdf_bytes: bytes) -> None:
 
     st.markdown(pdf_display, unsafe_allow_html=True)
 
-# PAGE CONFIGURATION
+# Page Configuration
 st.set_page_config(
     page_title='Bylaw Buddy',
     layout="wide",
     initial_sidebar_state="expanded",
 )
 
-
-# CUSTOM CSS STYLES
+# Custom CSS Styles
 st.markdown("""
 <style>
 /* Title and Subtitle Styling */
@@ -166,7 +140,7 @@ h1 {
     font-size: 0.95em;
 }
 
-/* Chat Input Styling */
+/* Chat Input Field Styling */
 .stChatInput:focus-within {
     border-color: #2B8DFF !important;
     border-width: 1px !important;
@@ -227,7 +201,7 @@ textarea[data-testid="stChatInput"]:focus-visible {
 </style>
 """, unsafe_allow_html=True)
 
-# HEADER SECTION
+# Header Section
 st.title("Bylaw Buddy")
 
 st.markdown('<div class="subtitle">Your AI assistant for Indian laws</div>', unsafe_allow_html=True)
@@ -249,7 +223,7 @@ st.markdown("""
 
 st.markdown("---")
 
-# SIDEBAR
+# Sidebar
 st.sidebar.header("Laws Indexed")
 
 for law in get_loaded_laws():
@@ -260,7 +234,7 @@ for law in get_loaded_laws():
         unsafe_allow_html=True
     )
 
-# CHAT INTERFACE
+# Chat Interface
 # Initialize session state
 if "messages" not in st.session_state:
     st.session_state.messages = []
