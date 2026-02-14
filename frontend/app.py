@@ -5,8 +5,7 @@ from typing import Optional, List, Dict
 
 # Configurations
 API_BASE_URL = "http://localhost:8000"
-API_TIMEOUT_SHORT = 10
-API_TIMEOUT_LONG = 20
+
 
 # API Functions
 @st.cache_data(ttl=300)  # Cache for 5 minutes
@@ -15,7 +14,6 @@ def get_loaded_laws() -> List[str]:
     try:
         response = requests.get(
             f"{API_BASE_URL}/laws",
-            timeout=API_TIMEOUT_SHORT
         )
         if response.status_code == 200:
             return response.json()
@@ -31,7 +29,6 @@ def ask_backend(question: str) -> Dict[str, any]:
         response = requests.post(
             f"{API_BASE_URL}/ask",
             json={"question": question},
-            timeout=API_TIMEOUT_SHORT
         )
         return response.json()
     except Exception:
@@ -59,7 +56,7 @@ def fetch_highlighted_pdf(citations: List[Dict]) -> Optional[bytes]:
                     for c in citations
                 ]
             },
-            timeout=API_TIMEOUT_LONG
+
         )
 
         if response.status_code != 200:
@@ -234,7 +231,7 @@ for law in get_loaded_laws():
         unsafe_allow_html=True
     )
 
-# Chat Interface
+# CHAT INTERFACE
 # Initialize session state
 if "messages" not in st.session_state:
     st.session_state.messages = []
