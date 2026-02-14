@@ -97,7 +97,6 @@ def ask_bylaw(request: QueryRequest):
                 "citations": []  # No citations because it's from the web
             }
         else:
-
             return {
                 "answer": "I'm sorry, I couldn't find relevant information in the local bylaws or through our extended search.",
                 "citations": []
