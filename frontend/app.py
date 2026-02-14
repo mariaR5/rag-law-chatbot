@@ -244,7 +244,7 @@ user_question = st.chat_input(
 # Handle new question
 if user_question:
     st.session_state.messages.append(("user", user_question))
-    with st.spinner("Thinking..."):
+    with st.spinner("Analyzing documents... (this may take up to 45s if web search is needed)"):
         response = ask_backend(user_question)
     st.session_state.messages.append(("assistant", response))
 
