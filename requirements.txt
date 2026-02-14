@@ -25,3 +25,6 @@ pypdf
 # Frontend (Streamlit)
 streamlit
 requests
+
+# Beautiful soup
+beautifulsoup4
