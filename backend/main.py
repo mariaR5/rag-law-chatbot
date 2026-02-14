@@ -15,6 +15,8 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_classic.chains.combine_documents import create_stuff_documents_chain
 from langchain_classic.chains import create_retrieval_chain
 
+from web_scraper import scrape_with_brightdata
+
 # App and env setup
 load_dotenv()
 app = FastAPI()
@@ -22,7 +24,7 @@ app = FastAPI()
 # Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["*"],  # Configure for production
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -86,17 +88,27 @@ def ask_bylaw(request: QueryRequest):
     negative_phrases = ["i don't know", "not mentioned in the context", "i'm sorry"]
 
     if any(phrase in answer_text.lower() for phrase in negative_phrases):
-        return {
-            "answer": answer_text,
-            "citations": []
-        }
+        scraped_answer = scrape_with_brightdata(request.question, os.getenv("BRIGHTDATA_API_TOKEN"))
+        
+        # Check if scraper actually returned useful text (and not an error/empty)
+        if scraped_answer and "Error" not in scraped_answer:
+            return {
+                "answer": f"**General Legal Info (Not from local PDFs):**\n\n{scraped_answer}",
+                "citations": []  # No citations because it's from the web
+            }
+        else:
+
+            return {
+                "answer": "I'm sorry, I couldn't find relevant information in the local bylaws or through our extended search.",
+                "citations": []
+            }
 
     # Success case -> Return answer and citations from context
     citations = [
         {
             "source": d.metadata.get("source", "Unknown"),
             "page": d.metadata.get("page", 0) + 1,
-            "snippet": d.page_content
+            "snippet": d.page_content  # Store full content for accurate highlighting
         } for d in response["context"]
     ]
 
