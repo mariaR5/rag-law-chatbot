@@ -57,6 +57,3 @@ frontend/highlighted_pdfs_frontend/
 # Generated PDFs (now obsolete - PDFs generated in memory)
 backend/highlighted_pdfs/
 frontend/highlighted_pdfs_frontend/
-
-
-backend/faiss_index/
