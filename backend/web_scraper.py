@@ -2,7 +2,6 @@ import requests
 import json
 import time
 import re
-from bs4 import BeautifulSoup
 
 def scrape_with_brightdata(user_query, api_token):
     dataset_id = "gd_mbz66arm2mf9cu856y"
@@ -39,33 +38,18 @@ def scrape_with_brightdata(user_query, api_token):
         else:
             return f"Error retrieving data: {result_response.status_code}"
 
-    # Extract and clean data
+    # Extract and clean data (ONLY from answer_text_markdown)
     try:
-        # Print keys to see what we actually got
         if not raw_data or not isinstance(raw_data, list):
             return "No data returned or unexpected format."
         
         first_record = raw_data[0]
+        answer_text = first_record.get("answer_text_markdown", "")
         
-        # Try multiple common keys for the answer content
-        html_content = (
-            first_record.get("message-content") or 
-            first_record.get("answer_text_markdown") or 
-            first_record.get("response_text") or 
-            ""
-        )
-        
-        if not html_content:
-            return "Could not find content field in response."
+        if not answer_text:
+            return "answer_text_markdown not found in response."
 
-        # Strip HTML tags
-        soup = BeautifulSoup(html_content, "html.parser")
-        for sup in soup.find_all(["sup", "script", "style"]):
-            sup.decompose()
-        
-        clean_text = soup.get_text(separator=" ", strip=True)
-        
-        clean_text = clean_text.replace("", "").strip()
+        clean_text = answer_text.strip()
 
         # Take first two sentences
         sentences = re.findall(r'[^.!?]+[.!?]', clean_text)
