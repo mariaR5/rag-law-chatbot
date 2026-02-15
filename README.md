@@ -4,7 +4,7 @@ Bylaw Buddy is an AI-powered legal assistant designed to help users navigate com
 
 ## Demo Video
 
-[![Watch the Demo](https://img.youtube.com/vi/ABC123XYZ/0.jpg)](https://youtu.be/WF867tQd5mk)
+[![Watch the Demo](https://img.youtube.com/vi/WF867tQd5mk/0.jpg)](https://youtu.be/WF867tQd5mk)
 
 ## Features
 
