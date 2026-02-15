@@ -3,6 +3,7 @@ uvicorn
 python-dotenv
 pydantic
 python-multipart
+requests
 
 # LangChain ecosystem (RAG)
 langchain
@@ -21,7 +22,3 @@ huggingface-hub
 # PDF processing
 pymupdf
 pypdf
-
-
-# Beautiful soup
-beautifulsoup4

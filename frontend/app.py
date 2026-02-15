@@ -1,10 +1,14 @@
+import os
 import streamlit as st
 import requests
 import base64
 from typing import Optional, List, Dict
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # Configurations
-API_BASE_URL = "http://localhost:8000"
+API_BASE_URL = os.getenv("API_BASE_URL", "http://localhost:8000")
 
 
 # API Functions
@@ -231,47 +235,51 @@ for law in get_loaded_laws():
         unsafe_allow_html=True
     )
 
-# CHAT INTERFACE
+# --- CHAT INTERFACE ---
+
 # Initialize session state
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# Chat input
-user_question = st.chat_input(
-    "Ask a legal question (e.g. Is wearing helmet compulsory?)"
-)
+# 2. Display existing chat history first
+for idx, message_data in enumerate(st.session_state.messages):
+    role, content = message_data
+    if role == "user":
+        with st.chat_message("user"):
+            st.write(content)
+    else:
+        with st.chat_message("assistant"):
+            st.write(content["answer"])
+            if content.get("citations"):
+                with st.expander("Evidence"):
+                    if st.button("View citation", key=f"btn_{idx}"):
+                        with st.spinner("Generating highlighted PDF..."):
+                            pdf_bytes = fetch_highlighted_pdf([content["citations"][0]])
+                            if pdf_bytes:
+                                show_pdf_inline(pdf_bytes)
+                    
+                    citation = content["citations"][0]
+                    st.markdown(f"**Source:** {citation['source']} | **Page:** {citation['page']}")
+            else:
+                st.write("No evidence found.")
+
+# Chat input at the bottom
+user_question = st.chat_input("Ask a legal question (e.g. Is wearing helmet compulsory?)")
 
 # Handle new question
 if user_question:
+    # Display the user's new message at the bottom
+    with st.chat_message("user"):
+        st.write(user_question)
+    
+    # Add to session state
     st.session_state.messages.append(("user", user_question))
-    with st.spinner("Analyzing documents... (this may take up to 45s if web search is needed)"):
-        response = ask_backend(user_question)
+
+    with st.chat_message("assistant"):
+        with st.spinner("Analyzing documents... (this may take up to 45s if web search is needed)"):
+            response = ask_backend(user_question)
+            st.write(response["answer"])
+    
+    # Add assistant response to state and refresh
     st.session_state.messages.append(("assistant", response))
-
-# Display chat history
-for idx, (role, message) in enumerate(st.session_state.messages):
-    if role == "user":
-        with st.chat_message("user"):
-            st.write(message)
-    else:
-        with st.chat_message("assistant"):
-            st.write(message["answer"])
-
-            if message["citations"]:
-                with st.expander("Evidence"):
-
-                    if st.button("View citation", key=f"multi_{idx}"):
-                        with st.spinner("Generating highlighted PDF..."):
-                            pdf_bytes = fetch_highlighted_pdf([message["citations"][0]])
-                            if pdf_bytes:
-                                show_pdf_inline(pdf_bytes)
-
-                    citation = message["citations"][0]
-                    st.markdown(
-                        f"""
-                        **Source:** {citation['source']}  
-                        **Page:** {citation['page']}  
-                        """
-                    )
-            else:
-                st.write("No evidence found.")
+    st.rerun()

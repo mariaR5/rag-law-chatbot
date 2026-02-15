@@ -2,6 +2,10 @@
 
 Bylaw Buddy is an AI-powered legal assistant designed to help users navigate complex legal documents (specifically Indian laws in this context). It uses a Retrieval-Augmented Generation (RAG) pipeline to provide accurate answers sourced directly from local PDF documents, with a fallback to web search for broader queries.
 
+## Demo Video
+
+[![Watch the Demo](https://img.youtube.com/vi/ABC123XYZ/0.jpg)](https://youtu.be/WF867tQd5mk)
+
 ## Features
 
 - **RAG Pipeline**: accurately answers questions based on uploaded PDF documents.
@@ -42,17 +46,20 @@ rag-law-chatbot/
 ## Installation & Setup
 
 ### Prerequisites
+
 - Python 3.9+ installed
 - A [Groq API Key](https://console.groq.com/)
 - (Optional) A [BrightData API Token](https://brightdata.com/) for web search
 
 ### 1. Clone the Repository
+
 ```bash
 git clone https://github.com/mariaR5/rag-law-chatbot.git
 cd rag-law-chatbot
 ```
 
 ### 2. Set Up Virtual Environment
+
 ```bash
 python -m venv venv
 # Windows
@@ -62,27 +69,33 @@ source venv/bin/activate
 ```
 
 ### 3. Install Dependencies
+
 ```bash
 pip install -r requirements.txt
 ```
 
 ### 4. Configure Environment Variables
+
 Create a `.env` file in the `backend/` directory:
-```env
+
+````env
 GROQ_API_KEY=your_groq_api_key_here
 BRIGHTDATA_API_TOKEN=your_brightdata_token_here
-```
+```T
 
 ### 5. Run the Application
+
 You need to run both the backend and frontend terminals.
 
 **Terminal 1 (Backend):**
+
 ```bash
 cd backend
 uvicorn main:app --reload
-```
+````
 
 **Terminal 2 (Frontend):**
+
 ```bash
 cd frontend
 streamlit run app.py
@@ -94,19 +107,19 @@ streamlit run app.py
 graph TD
     User[User] -->|Asks Question| Frontend[Streamlit UI]
     Frontend -->|POST /ask| Backend[FastAPI Backend]
-    
+
     subgraph "RAG Pipeline"
         Backend -->|Query| VectorDB[(FAISS Vector DB)]
         VectorDB -->|Retrieved Docs| Backend
         Backend -->|Context + Query| LLM[Groq Llama 3]
         LLM -->|Answer| Backend
     end
-    
+
     subgraph "Fallback"
         Backend -.->|No Context Found| WebScraper[BrightData Web Search]
         WebScraper -.->|External Info| Backend
     end
-    
+
     Backend -->|Answer + Citations| Frontend
 ```
 
@@ -118,7 +131,7 @@ graph TD
 - `POST /highlight`: Generate a PDF with highlighted citations.
 - `GET /pdf/{pdf_name}`: Serve a raw PDF file.
 
-## Team
+## eam
 
 - **NIDHA RAHMA**
 - **ROSE MARIA**
