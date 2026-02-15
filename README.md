@@ -131,7 +131,7 @@ graph TD
 - `POST /highlight`: Generate a PDF with highlighted citations.
 - `GET /pdf/{pdf_name}`: Serve a raw PDF file.
 
-## eam
+## Team
 
 - **NIDHA RAHMA**
 - **ROSE MARIA**
